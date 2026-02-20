@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REFLEX — Reaction Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0F172A;
+    --surface: #1E293B;
+    --surface2: #253347;
+    --text: #F1F5F9;
+    --ready: #10B981;
+    --waiting: #F59E0B;
+    --result: #3B82F6;
+    --error: #EF4444;
+    --muted: #94A3B8;
+    --border: rgba(255,255,255,0.07);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2.5rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 10;
+  }
+
+  .logo {
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #F1F5F9 0%, #94A3B8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .logo span {
+    background: linear-gradient(135deg, #10B981, #3B82F6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.75rem;
+    border-radius: 100px;
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    height: calc(100vh - 73px);
+  }
+
+  /* LEFT — GAME ARENA */
+  .arena {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  #canvas-container {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  #canvas-container canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .arena-overlay {
+    position: relative;
+    z-index: 5;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .state-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    transition: color 0.3s;
+  }
+
+  .main-text {
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    transition: all 0.3s;
+  }
+
+  .sub-text {
+    margin-top: 1rem;
+    font-size: 1rem;
+    color: var(--muted);
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  .result-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(3rem, 8vw, 6.5rem);
+    font-weight: 700;
+    color: var(--result);
+    line-height: 1;
+    transition: all 0.4s;
+  }
+
+  .result-unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+
+  /* Click zone indicator */
+  .click-hint {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    pointer-events: none;
+    opacity: 0.6;
+    transition: opacity 0.3s;
+  }
+
+  .click-hint .key {
+    border: 1px solid var(--muted);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    opacity: 0.7;
+  }
+
+  /* Arena glow overlay for states */
+  .arena-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    transition: opacity 0.4s;
+    opacity: 0;
+  }
+
+  /* RIGHT PANEL */
+  .panel {
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-section {
+    padding: 1.75rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+  }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 1.1rem;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+  }
+
+  .stat-card.avg::before { background: var(--result); }
+  .stat-card.best::before { background: var(--ready); }
+  .stat-card.count::before { background: var(--waiting); }
+  .stat-card.last::before { background: var(--muted); }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+  }
+
+  .stat-card.avg .stat-value { color: var(--result); }
+  .stat-card.best .stat-value { color: var(--ready); }
+  .stat-card.count .stat-value { color: var(--waiting); }
+  .stat-card.last .stat-value { color: var(--muted); }
+
+  .stat-name {
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    font-weight: 400;
+  }
+
+  /* History */
+  .history-section {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem 2rem;
+  }
+
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-right: 0.25rem;
+  }
+
+  .history-list::-webkit-scrollbar { width: 3px; }
+  .history-list::-webkit-scrollbar-track { background: transparent; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 0.9rem;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    animation: slideIn 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .history-item.false-start {
+    border-color: rgba(239,68,68,0.3);
+    background: rgba(239,68,68,0.05);
+  }
+
+  .history-num { color: var(--muted); font-size: 0.7rem; }
+
+  .history-time { color: var(--text); font-weight: 700; }
+
+  .history-badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 100px;
+    font-weight: 700;
+  }
+
+  .badge-best { background: rgba(16,185,129,0.15); color: var(--ready); }
+  .badge-false { background: rgba(239,68,68,0.15); color: var(--error); }
+  .badge-good { background: rgba(59,130,246,0.15); color: var(--result); }
+
+  .empty-history {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: var(--muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    opacity: 0.5;
+    gap: 0.5rem;
+  }
+
+  .empty-icon { font-size: 2rem; opacity: 0.4; }
+
+  /* Controls */
+  .controls {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 0.85rem 1.25rem;
+    border-radius: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    box-shadow: 0 4px 20px rgba(16,185,129,0.3);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 6px 28px rgba(16,185,129,0.45);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:disabled {
+    background: var(--surface2);
+    color: var(--muted);
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  /* Instructions */
+  .instructions {
+    padding: 0 2rem 1.5rem;
+  }
+
+  .instr-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .instr-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .instr-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  /* State-specific colors */
+  body.state-idle .main-text { color: var(--text); }
+  body.state-waiting .main-text { color: var(--waiting); }
+  body.state-ready .main-text { color: var(--ready); }
+  body.state-result .result-time { color: var(--result); }
+  body.state-error .main-text { color: var(--error); }
+
+  /* Pulse ring around arena */
+  .pulse-ring {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    main {
+      grid-template-columns: 1fr;
+      grid-template-rows: 55vh auto;
+      height: auto;
+    }
+    .panel {
+      border-left: none;
+      border-top: 1px solid var(--border);
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+    header { padding: 1rem 1.5rem; }
+    .arena { min-height: 55vh; }
+  }
+
+  /* Shimmer update animation for stats */
+  @keyframes flashStat {
+    0% { opacity: 1; }
+    30% { opacity: 0.4; }
+    100% { opacity: 1; }
+  }
+  .flash { animation: flashStat 0.4s ease; }
+</style>
+</head>
+<body class="state-idle">
+
+<header>
+  <div class="logo">RE<span>FLEX</span></div>
+  <div class="header-badge">REACTION TIMER v1.0</div>
+</header>
+
+<main>
+  <!-- LEFT: GAME ARENA -->
+  <div class="arena" id="arena">
+    <div id="canvas-container"></div>
+    <div class="arena-glow" id="arena-glow"></div>
+
+    <div class="arena-overlay" id="overlay">
+      <div class="state-label" id="state-label">IDLE</div>
+      <div class="main-text" id="main-text">REFLEX</div>
+      <div class="sub-text" id="sub-text">Click START to begin</div>
+    </div>
+
+    <div class="click-hint" id="click-hint">
+      <span class="key">SPACE</span> or <span class="key">CLICK</span> to react
+    </div>
+  </div>
+
+  <!-- RIGHT: PANEL -->
+  <div class="panel">
+    <!-- Stats -->
+    <div class="panel-section">
+      <div class="panel-label">Session Statistics</div>
+      <div class="stats-grid">
+        <div class="stat-card avg">
+          <div class="stat-value" id="stat-avg">—</div>
+          <div class="stat-name">Average (ms)</div>
+        </div>
+        <div class="stat-card best">
+          <div class="stat-value" id="stat-best">—</div>
+          <div class="stat-name">Best (ms)</div>
+        </div>
+        <div class="stat-card count">
+          <div class="stat-value" id="stat-count">0</div>
+          <div class="stat-name">Attempts</div>
+        </div>
+        <div class="stat-card last">
+          <div class="stat-value" id="stat-last">—</div>
+          <div class="stat-name">Last (ms)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions">
+      <div class="panel-label" style="margin-bottom:0.9rem">How to Play</div>
+      <div class="instr-list">
+        <div class="instr-item">
+          <div class="instr-num">1</div>
+          <span>Click <strong style="color:var(--text)">Start</strong> to begin the session</span>
+        </div>
+        <div class="instr-item">
+          <div class="instr-num">2</div>
+          <span>Wait for the shape to turn <strong style="color:var(--ready)">green</strong></span>
+        </div>
+        <div class="instr-item">
+          <div class="instr-num">3</div>
+          <span>Click or press Space as fast as you can</span>
+        </div>
+        <div class="instr-item">
+          <div class="instr-num">4</div>
+          <span>Clicking too early = <strong style="color:var(--error)">false start</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="history-section">
+      <div class="panel-label">History</div>
+      <div class="history-list" id="history-list">
+        <div class="empty-history" id="empty-history">
+          <div class="empty-icon">◎</div>
+          <span>No attempts yet</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn btn-primary" id="btn-start">START</button>
+      <button class="btn btn-ghost" id="btn-reset">RESET</button>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ==========================================
+// THREE.JS SCENE
+// ==========================================
+
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 100);
+camera.position.set(0, 0, 6);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.shadowMap.enabled = true;
+container.appendChild(renderer.domElement);
+
+// Lights
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+dirLight.position.set(5, 8, 5);
+scene.add(dirLight);
+
+const pointLight1 = new THREE.PointLight(0x10B981, 2, 20);
+pointLight1.position.set(-4, 3, 4);
+scene.add(pointLight1);
+
+const pointLight2 = new THREE.PointLight(0x3B82F6, 1.5, 20);
+pointLight2.position.set(4, -3, 4);
+scene.add(pointLight2);
+
+// === MAIN SHAPE: Icosahedron ===
+const mainGeo = new THREE.IcosahedronGeometry(1.5, 0);
+const mainMat = new THREE.MeshPhongMaterial({
+  color: 0x1E293B,
+  emissive: 0x0F172A,
+  shininess: 120,
+  wireframe: false,
+});
+const mainMesh = new THREE.Mesh(mainGeo, mainMat);
+mainMesh.castShadow = true;
+scene.add(mainMesh);
+
+// Wireframe overlay
+const wireMat = new THREE.MeshBasicMaterial({
+  color: 0x3B82F6,
+  wireframe: true,
+  transparent: true,
+  opacity: 0.12,
+});
+const wireMesh = new THREE.Mesh(mainGeo, wireMat);
+scene.add(wireMesh);
+
+// === ORBITING SMALL SHAPES ===
+const orbitGroup = new THREE.Group();
+scene.add(orbitGroup);
+
+const orbiters = [];
+const orbitGeos = [
+  new THREE.OctahedronGeometry(0.22, 0),
+  new THREE.TetrahedronGeometry(0.22, 0),
+  new THREE.BoxGeometry(0.25, 0.25, 0.25),
+  new THREE.OctahedronGeometry(0.18, 0),
+  new THREE.TetrahedronGeometry(0.18, 0),
+];
+const orbitColors = [0x10B981, 0x3B82F6, 0xF59E0B, 0x8B5CF6, 0xEF4444];
+
+for (let i = 0; i < 5; i++) {
+  const mat = new THREE.MeshPhongMaterial({
+    color: orbitColors[i],
+    emissive: orbitColors[i],
+    emissiveIntensity: 0.3,
+    shininess: 80,
+  });
+  const mesh = new THREE.Mesh(orbitGeos[i], mat);
+  const angle = (i / 5) * Math.PI * 2;
+  const radius = 2.8;
+  mesh.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.5, 0);
+  orbitGroup.add(mesh);
+  orbiters.push({ mesh, angle, radius, speed: 0.4 + Math.random() * 0.3 });
+}
+
+// === PARTICLE FIELD ===
+const particleCount = 180;
+const pPositions = new Float32Array(particleCount * 3);
+for (let i = 0; i < particleCount; i++) {
+  pPositions[i * 3] = (Math.random() - 0.5) * 20;
+  pPositions[i * 3 + 1] = (Math.random() - 0.5) * 20;
+  pPositions[i * 3 + 2] = (Math.random() - 0.5) * 15 - 3;
+}
+const pGeo = new THREE.BufferGeometry();
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+const pMat = new THREE.PointsMaterial({ color: 0x3B82F6, size: 0.05, transparent: true, opacity: 0.5 });
+const particles = new THREE.Points(pGeo, pMat);
+scene.add(particles);
+
+// ==========================================
+// GAME STATE
+// ==========================================
+
+const STATES = { IDLE: 'idle', WAITING: 'waiting', READY: 'ready', RESULT: 'result', ERROR: 'error' };
+
+let gameState = STATES.IDLE;
+let startTime = 0;
+let waitTimer = null;
+let times = [];
+let falseStarts = 0;
+let attemptCount = 0;
+let bestTime = Infinity;
+let sessionActive = false;
+
+// Animation targets for Three.js
+let targetColor = new THREE.Color(0x1E293B);
+let targetEmissive = new THREE.Color(0x0F172A);
+let targetEmissiveIntensity = 0;
+let targetWireOpacity = 0.12;
+let targetWireColor = new THREE.Color(0x3B82F6);
+let isExploding = false;
+let explodeProgress = 0;
+let pulsePhase = 0;
+
+// ==========================================
+// DOM REFS
+// ==========================================
+
+const arena = document.getElementById('arena');
+const overlay = document.getElementById('overlay');
+const stateLabel = document.getElementById('state-label');
+const mainText = document.getElementById('main-text');
+const subText = document.getElementById('sub-text');
+const clickHint = document.getElementById('click-hint');
+const arenaGlow = document.getElementById('arena-glow');
+const historyList = document.getElementById('history-list');
+const emptyHistory = document.getElementById('empty-history');
+const btnStart = document.getElementById('btn-start');
+const btnReset = document.getElementById('btn-reset');
+
+// ==========================================
+// STATE MACHINE
+// ==========================================
+
+function setState(newState, data = {}) {
+  gameState = newState;
+  document.body.className = `state-${newState}`;
+
+  switch (newState) {
+    case STATES.IDLE:
+      stateLabel.textContent = 'IDLE';
+      mainText.innerHTML = 'REFLEX';
+      mainText.className = 'main-text';
+      subText.textContent = 'Click START to begin';
+      clickHint.style.opacity = '0';
+      arenaGlow.style.background = '';
+      arenaGlow.style.opacity = '0';
+      targetColor.set(0x1E293B);
+      targetEmissive.set(0x0F172A);
+      targetEmissiveIntensity = 0;
+      targetWireOpacity = 0.12;
+      targetWireColor.set(0x3B82F6);
+      btnStart.textContent = 'START';
+      btnStart.disabled = false;
+      break;
+
+    case STATES.WAITING:
+      stateLabel.textContent = 'WAIT FOR IT...';
+      mainText.innerHTML = '●';
+      mainText.className = 'main-text';
+      subText.textContent = 'Stay sharp — don\'t click yet';
+      clickHint.style.opacity = '0.3';
+      arenaGlow.style.background = 'radial-gradient(ellipse at center, rgba(245,158,11,0.06) 0%, transparent 70%)';
+      arenaGlow.style.opacity = '1';
+      targetColor.set(0x1E293B);
+      targetEmissive.set(0x78350F);
+      targetEmissiveIntensity = 0.08;
+      targetWireOpacity = 0.15;
+      targetWireColor.set(0xF59E0B);
+      break;
+
+    case STATES.READY:
+      stateLabel.textContent = 'GO!';
+      mainText.innerHTML = '⚡';
+      mainText.className = 'main-text';
+      subText.textContent = 'CLICK NOW!';
+      startTime = performance.now();
+      clickHint.style.opacity = '1';
+      arenaGlow.style.background = 'radial-gradient(ellipse at center, rgba(16,185,129,0.15) 0%, transparent 70%)';
+      arenaGlow.style.opacity = '1';
+      targetColor.set(0x0D3B2E);
+      targetEmissive.set(0x10B981);
+      targetEmissiveIntensity = 0.4;
+      targetWireOpacity = 0.4;
+      targetWireColor.set(0x10B981);
+      break;
+
+    case STATES.RESULT: {
+      const ms = data.ms;
+      stateLabel.textContent = 'RESULT';
+      mainText.innerHTML = '';
+      mainText.className = 'result-time';
+      mainText.innerHTML = `${ms}<span style="font-size:1.2rem;color:var(--muted);font-weight:400"> ms</span>`;
+      subText.textContent = getRating(ms);
+      clickHint.style.opacity = '0.6';
+      arenaGlow.style.background = 'radial-gradient(ellipse at center, rgba(59,130,246,0.12) 0%, transparent 70%)';
+      arenaGlow.style.opacity = '1';
+      targetColor.set(0x0F2040);
+      targetEmissive.set(0x3B82F6);
+      targetEmissiveIntensity = 0.25;
+      targetWireOpacity = 0.25;
+      targetWireColor.set(0x3B82F6);
+      isExploding = true;
+      explodeProgress = 0;
+      break;
+    }
+
+    case STATES.ERROR:
+      stateLabel.textContent = 'FALSE START!';
+      mainText.innerHTML = '✕';
+      mainText.className = 'main-text';
+      subText.textContent = data.msg || 'Too early! Wait for the signal';
+      clickHint.style.opacity = '0.6';
+      arenaGlow.style.background = 'radial-gradient(ellipse at center, rgba(239,68,68,0.15) 0%, transparent 70%)';
+      arenaGlow.style.opacity = '1';
+      targetColor.set(0x3B0F0F);
+      targetEmissive.set(0xEF4444);
+      targetEmissiveIntensity = 0.3;
+      targetWireOpacity = 0.35;
+      targetWireColor.set(0xEF4444);
+      break;
+  }
+}
+
+function getRating(ms) {
+  if (ms < 150) return '🏆 World Class!';
+  if (ms < 200) return '⚡ Elite reflexes';
+  if (ms < 250) return '🎯 Excellent!';
+  if (ms < 300) return '👍 Above average';
+  if (ms < 400) return '✓ Average';
+  if (ms < 500) return 'Keep practicing';
+  return 'Slow and steady';
+}
+
+// ==========================================
+// GAME LOGIC
+// ==========================================
+
+function startGame() {
+  if (!sessionActive) {
+    sessionActive = true;
+    btnStart.textContent = 'NEXT';
+  }
+  clearTimeout(waitTimer);
+  startRound();
+}
+
+function startRound() {
+  setState(STATES.WAITING);
+  const delay = 1000 + Math.random() * 4000;
+  waitTimer = setTimeout(() => {
+    if (gameState === STATES.WAITING) setState(STATES.READY);
+  }, delay);
+}
+
+function handleReaction() {
+  if (!sessionActive) return;
+
+  if (gameState === STATES.WAITING) {
+    clearTimeout(waitTimer);
+    falseStarts++;
+    attemptCount++;
+    setState(STATES.ERROR, { msg: 'Too early! Wait for green.' });
+    addHistory(null, true);
+    updateStats();
+    // Auto continue after 1.5s
+    setTimeout(() => {
+      if (gameState === STATES.ERROR && sessionActive) startRound();
+    }, 1500);
+    return;
+  }
+
+  if (gameState === STATES.READY) {
+    const ms = Math.round(performance.now() - startTime);
+    attemptCount++;
+    times.push(ms);
+    if (ms < bestTime) bestTime = ms;
+    setState(STATES.RESULT, { ms });
+    addHistory(ms, false);
+    updateStats();
+    // Auto continue after 2s
+    setTimeout(() => {
+      if (gameState === STATES.RESULT && sessionActive) startRound();
+    }, 2000);
+    return;
+  }
+
+  if (gameState === STATES.RESULT || gameState === STATES.ERROR) {
+    startRound();
+    return;
+  }
+}
+
+function resetSession() {
+  clearTimeout(waitTimer);
+  sessionActive = false;
+  times = [];
+  falseStarts = 0;
+  attemptCount = 0;
+  bestTime = Infinity;
+  setState(STATES.IDLE);
+  btnStart.textContent = 'START';
+  btnStart.disabled = false;
+  // Clear history UI
+  historyList.innerHTML = '';
+  historyList.appendChild(emptyHistory);
+  emptyHistory.style.display = 'flex';
+  // Reset stats
+  document.getElementById('stat-avg').textContent = '—';
+  document.getElementById('stat-best').textContent = '—';
+  document.getElementById('stat-count').textContent = '0';
+  document.getElementById('stat-last').textContent = '—';
+}
+
+function updateStats() {
+  const avg = times.length ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : null;
+  const best = times.length ? Math.min(...times) : null;
+  const last = times.length ? times[times.length - 1] : null;
+
+  animStat('stat-avg', avg !== null ? avg : '—');
+  animStat('stat-best', best !== null ? best : '—');
+  animStat('stat-count', attemptCount);
+  animStat('stat-last', last !== null ? last : '—');
+}
+
+function animStat(id, val) {
+  const el = document.getElementById(id);
+  el.textContent = val;
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+
+function addHistory(ms, isFalse) {
+  emptyHistory.style.display = 'none';
+  const item = document.createElement('div');
+  item.className = 'history-item' + (isFalse ? ' false-start' : '');
+
+  const isBest = ms !== null && ms === Math.min(...times) && times.filter(t => t === ms).length === 1;
+  const badge = isFalse
+    ? '<span class="history-badge badge-false">FALSE</span>'
+    : isBest
+    ? '<span class="history-badge badge-best">BEST</span>'
+    : '<span class="history-badge badge-good">OK</span>';
+
+  item.innerHTML = `
+    <span class="history-num">#${attemptCount}</span>
+    <span class="history-time">${isFalse ? 'DNF' : ms + ' ms'}</span>
+    ${badge}
+  `;
+  historyList.insertBefore(item, historyList.firstChild);
+}
+
+// ==========================================
+// EVENTS
+// ==========================================
+
+arena.addEventListener('click', handleReaction);
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); handleReaction(); }
+});
+btnStart.addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
+btnReset.addEventListener('click', (e) => { e.stopPropagation(); resetSession(); });
+
+// ==========================================
+// THREE.JS ANIMATION LOOP
+// ==========================================
+
+const clock = new THREE.Clock();
+let time = 0;
+
+const lerpColor = (current, target, alpha) => {
+  current.r += (target.r - current.r) * alpha;
+  current.g += (target.g - current.g) * alpha;
+  current.b += (target.b - current.b) * alpha;
+};
+
+const currentColor = new THREE.Color(0x1E293B);
+const currentEmissive = new THREE.Color(0x0F172A);
+const currentWireColor = new THREE.Color(0x3B82F6);
+
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+  time += delta;
+  pulsePhase += delta * 2;
+
+  // Lerp colors
+  lerpColor(currentColor, targetColor, 0.06);
+  lerpColor(currentEmissive, targetEmissive, 0.06);
+  lerpColor(currentWireColor, targetWireColor, 0.06);
+
+  mainMat.color.copy(currentColor);
+  mainMat.emissive.copy(currentEmissive);
+  mainMat.emissiveIntensity += (targetEmissiveIntensity - mainMat.emissiveIntensity) * 0.06;
+
+  wireMat.color.copy(currentWireColor);
+  wireMat.opacity += (targetWireOpacity - wireMat.opacity) * 0.06;
+
+  // Main shape rotation — changes speed by state
+  const rotSpeed = gameState === STATES.READY ? 2.5
+    : gameState === STATES.RESULT ? 4.0
+    : gameState === STATES.ERROR ? 3.0
+    : 0.4;
+
+  mainMesh.rotation.x += delta * rotSpeed * 0.6;
+  mainMesh.rotation.y += delta * rotSpeed * 0.9;
+  mainMesh.rotation.z += delta * rotSpeed * 0.3;
+  wireMesh.rotation.copy(mainMesh.rotation);
+
+  // Pulse scale
+  const pulseScale = gameState === STATES.READY
+    ? 1 + Math.sin(pulsePhase * 3) * 0.07
+    : gameState === STATES.WAITING
+    ? 1 + Math.sin(pulsePhase * 1.5) * 0.03
+    : 1 + Math.sin(time * 0.5) * 0.015;
+
+  mainMesh.scale.setScalar(pulseScale);
+  wireMesh.scale.setScalar(pulseScale);
+
+  // Orbiter rotation
+  orbitGroup.rotation.z += delta * (gameState === STATES.READY ? 1.2 : 0.25);
+  orbiters.forEach((o, i) => {
+    o.angle += delta * o.speed * (gameState === STATES.READY ? 2 : 1);
+    const r = o.radius;
+    o.mesh.position.set(
+      Math.cos(o.angle) * r,
+      Math.sin(o.angle) * r * 0.5,
+      Math.sin(o.angle * 1.3) * 0.8
+    );
+    o.mesh.rotation.x += delta * 1.5;
+    o.mesh.rotation.y += delta * 2;
+    // Opacity by state
+    const targetOp = gameState === STATES.IDLE ? 0.5 : gameState === STATES.READY ? 1.0 : 0.7;
+    o.mesh.material.opacity = o.mesh.material.opacity + (targetOp - o.mesh.material.opacity) * 0.05;
+    o.mesh.material.transparent = true;
+    // Emissive intensity
+    o.mesh.material.emissiveIntensity = gameState === STATES.READY
+      ? 0.5 + Math.sin(time * 4 + i) * 0.3
+      : 0.2;
+  });
+
+  // Particles slow drift
+  particles.rotation.y += delta * 0.03;
+  particles.rotation.x += delta * 0.01;
+  pMat.opacity = 0.3 + Math.sin(time * 0.5) * 0.1;
+
+  // Point lights pulse
+  pointLight1.intensity = 1.5 + Math.sin(time * 2.1) * 0.5;
+  pointLight2.intensity = 1.2 + Math.sin(time * 1.7 + 1) * 0.4;
+
+  // Explosion effect on result
+  if (isExploding) {
+    explodeProgress = Math.min(explodeProgress + delta * 2, 1);
+    const s = 1 + Math.sin(explodeProgress * Math.PI) * 0.3;
+    mainMesh.scale.setScalar(s);
+    wireMesh.scale.setScalar(s);
+    if (explodeProgress >= 1) isExploding = false;
+  }
+
+  // Camera subtle float
+  camera.position.x = Math.sin(time * 0.3) * 0.3;
+  camera.position.y = Math.cos(time * 0.2) * 0.2;
+  camera.lookAt(0, 0, 0);
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// ==========================================
+// RESIZE
+// ==========================================
+
+function onResize() {
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', onResize);
+onResize();
+</script>
+</body>
+</html>
