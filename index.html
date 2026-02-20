@@ -612,34 +612,7 @@ const wireMat = new THREE.MeshBasicMaterial({
 const wireMesh = new THREE.Mesh(mainGeo, wireMat);
 scene.add(wireMesh);
 
-// === ORBITING SMALL SHAPES ===
-const orbitGroup = new THREE.Group();
-scene.add(orbitGroup);
 
-const orbiters = [];
-const orbitGeos = [
-  new THREE.OctahedronGeometry(0.22, 0),
-  new THREE.TetrahedronGeometry(0.22, 0),
-  new THREE.BoxGeometry(0.25, 0.25, 0.25),
-  new THREE.OctahedronGeometry(0.18, 0),
-  new THREE.TetrahedronGeometry(0.18, 0),
-];
-const orbitColors = [0x10B981, 0x3B82F6, 0xF59E0B, 0x8B5CF6, 0xEF4444];
-
-for (let i = 0; i < 5; i++) {
-  const mat = new THREE.MeshPhongMaterial({
-    color: orbitColors[i],
-    emissive: orbitColors[i],
-    emissiveIntensity: 0.3,
-    shininess: 80,
-  });
-  const mesh = new THREE.Mesh(orbitGeos[i], mat);
-  const angle = (i / 5) * Math.PI * 2;
-  const radius = 2.8;
-  mesh.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.5, 0);
-  orbitGroup.add(mesh);
-  orbiters.push({ mesh, angle, radius, speed: 0.4 + Math.random() * 0.3 });
-}
 
 // === PARTICLE FIELD ===
 const particleCount = 180;
@@ -985,28 +958,6 @@ function animate() {
 
   mainMesh.scale.setScalar(pulseScale);
   wireMesh.scale.setScalar(pulseScale);
-
-  // Orbiter rotation
-  orbitGroup.rotation.z += delta * (gameState === STATES.READY ? 1.2 : 0.25);
-  orbiters.forEach((o, i) => {
-    o.angle += delta * o.speed * (gameState === STATES.READY ? 2 : 1);
-    const r = o.radius;
-    o.mesh.position.set(
-      Math.cos(o.angle) * r,
-      Math.sin(o.angle) * r * 0.5,
-      Math.sin(o.angle * 1.3) * 0.8
-    );
-    o.mesh.rotation.x += delta * 1.5;
-    o.mesh.rotation.y += delta * 2;
-    // Opacity by state
-    const targetOp = gameState === STATES.IDLE ? 0.5 : gameState === STATES.READY ? 1.0 : 0.7;
-    o.mesh.material.opacity = o.mesh.material.opacity + (targetOp - o.mesh.material.opacity) * 0.05;
-    o.mesh.material.transparent = true;
-    // Emissive intensity
-    o.mesh.material.emissiveIntensity = gameState === STATES.READY
-      ? 0.5 + Math.sin(time * 4 + i) * 0.3
-      : 0.2;
-  });
 
   // Particles slow drift
   particles.rotation.y += delta * 0.03;
