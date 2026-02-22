@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>REFLEX — Reaction Timer</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -26,8 +27,8 @@
     background: var(--bg);
     color: var(--text);
     font-family: 'Outfit', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
+    height: 100vh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
@@ -37,7 +38,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.5rem 2.5rem;
+    padding: 0.75rem 2.5rem;
     border-bottom: 1px solid var(--border);
     position: relative;
     z-index: 10;
@@ -75,7 +76,8 @@
     display: grid;
     grid-template-columns: 1fr 380px;
     gap: 0;
-    height: calc(100vh - 73px);
+    overflow: hidden;
+    min-height: 0;
   }
 
   /* LEFT — GAME ARENA */
@@ -103,7 +105,10 @@
   }
 
   .arena-overlay {
-    position: relative;
+    position: absolute;
+    bottom: 4rem;
+    left: 0;
+    right: 0;
     z-index: 5;
     text-align: center;
     pointer-events: none;
@@ -120,7 +125,7 @@
   }
 
   .main-text {
-    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-size: clamp(2rem, 4vw, 3.5rem);
     font-weight: 900;
     letter-spacing: -0.02em;
     line-height: 1;
@@ -128,8 +133,8 @@
   }
 
   .sub-text {
-    margin-top: 1rem;
-    font-size: 1rem;
+    margin-top: 0.6rem;
+    font-size: 0.95rem;
     color: var(--muted);
     font-weight: 300;
     letter-spacing: 0.05em;
@@ -137,7 +142,7 @@
 
   .result-time {
     font-family: 'JetBrains Mono', monospace;
-    font-size: clamp(3rem, 8vw, 6.5rem);
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
     font-weight: 700;
     color: var(--result);
     line-height: 1;
@@ -154,7 +159,7 @@
   /* Click zone indicator */
   .click-hint {
     position: absolute;
-    bottom: 2.5rem;
+    bottom: 1.5rem;
     left: 50%;
     transform: translateX(-50%);
     z-index: 5;
@@ -168,6 +173,7 @@
     pointer-events: none;
     opacity: 0.6;
     transition: opacity 0.3s;
+    white-space: nowrap;
   }
 
   .click-hint .key {
@@ -425,12 +431,121 @@
     margin-top: 0.1rem;
   }
 
-  /* State-specific colors */
+  /* Score ratings */
+  .ratings-section {
+    padding: 0 2rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ratings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .rating-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 0.7rem;
+    background: var(--surface);
+    border-radius: 7px;
+    border: 1px solid var(--border);
+  }
+
+  .rating-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .rating-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .rating-range {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+
   body.state-idle .main-text { color: var(--text); }
   body.state-waiting .main-text { color: var(--waiting); }
   body.state-ready .main-text { color: var(--ready); }
   body.state-result .result-time { color: var(--result); }
   body.state-error .main-text { color: var(--error); }
+
+  /* Hide bottom overlay when idle — instructions overlay takes over */
+  body.state-idle .arena-overlay { opacity: 0; }
+  body.state-idle .click-hint { opacity: 0 !important; }
+
+  /* Idle instructions overlay — centered on shape */
+  .idle-instructions {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -58%);
+    z-index: 6;
+    text-align: center;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  body.state-idle .idle-instructions { opacity: 1; }
+
+  .idle-title {
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #F1F5F9 0%, #94A3B8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.3rem;
+  }
+
+  .idle-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .idle-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .idle-step-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--result);
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  .idle-cta {
+    margin-top: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    color: var(--ready);
+    text-transform: uppercase;
+  }
 
   /* Pulse ring around arena */
   .pulse-ring {
@@ -480,9 +595,20 @@
     <div class="arena-glow" id="arena-glow"></div>
 
     <div class="arena-overlay" id="overlay">
-      <div class="state-label" id="state-label">IDLE</div>
+      <div class="state-label" id="state-label"></div>
       <div class="main-text" id="main-text">REFLEX</div>
-      <div class="sub-text" id="sub-text">Click START to begin</div>
+      <div class="sub-text" id="sub-text">Click or press Space to begin</div>
+    </div>
+
+    <!-- Idle instructions — visible only before game starts -->
+    <div class="idle-instructions" id="idle-instructions">
+      <div class="idle-title">REFLEX</div>
+      <div class="idle-steps">
+        <div class="idle-step"><span class="idle-step-dot"></span>Wait for the shape to turn <strong style="color:var(--ready);margin-left:0.2rem">green</strong></div>
+        <div class="idle-step"><span class="idle-step-dot"></span>Click or press Space as fast as you can</div>
+        <div class="idle-step"><span class="idle-step-dot" style="background:var(--error)"></span>Clicking too early = <strong style="color:var(--error);margin-left:0.2rem">false start</strong></div>
+      </div>
+      <div class="idle-cta">Click anywhere or press Space to start</div>
     </div>
 
     <div class="click-hint" id="click-hint">
@@ -538,6 +664,48 @@
       </div>
     </div>
 
+    <!-- Score Ratings -->
+    <div class="ratings-section">
+      <div class="panel-label" style="margin-bottom:0.9rem">Score Guide</div>
+      <div class="ratings-list">
+        <div class="rating-item">
+          <div class="rating-label">
+            <div class="rating-dot" style="background:#FFD700"></div>
+            <span style="color:#FFD700">Amazing</span>
+          </div>
+          <div class="rating-range">&lt; 150 ms</div>
+        </div>
+        <div class="rating-item">
+          <div class="rating-label">
+            <div class="rating-dot" style="background:var(--ready)"></div>
+            <span style="color:var(--ready)">Very Good</span>
+          </div>
+          <div class="rating-range">150 – 200 ms</div>
+        </div>
+        <div class="rating-item">
+          <div class="rating-label">
+            <div class="rating-dot" style="background:var(--result)"></div>
+            <span style="color:var(--result)">Good</span>
+          </div>
+          <div class="rating-range">200 – 300 ms</div>
+        </div>
+        <div class="rating-item">
+          <div class="rating-label">
+            <div class="rating-dot" style="background:var(--muted)"></div>
+            <span style="color:var(--muted)">Average</span>
+          </div>
+          <div class="rating-range">300 – 400 ms</div>
+        </div>
+        <div class="rating-item">
+          <div class="rating-label">
+            <div class="rating-dot" style="background:var(--error)"></div>
+            <span style="color:var(--error)">Below Average</span>
+          </div>
+          <div class="rating-range">&gt; 400 ms</div>
+        </div>
+      </div>
+    </div>
+
     <!-- History -->
     <div class="history-section">
       <div class="panel-label">History</div>
@@ -567,6 +735,7 @@ const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 100);
 camera.position.set(0, 0, 6);
+camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -600,6 +769,7 @@ const mainMat = new THREE.MeshPhongMaterial({
 });
 const mainMesh = new THREE.Mesh(mainGeo, mainMat);
 mainMesh.castShadow = true;
+mainMesh.position.y = 0.6;
 scene.add(mainMesh);
 
 // Wireframe overlay
@@ -610,6 +780,7 @@ const wireMat = new THREE.MeshBasicMaterial({
   opacity: 0.12,
 });
 const wireMesh = new THREE.Mesh(mainGeo, wireMat);
+wireMesh.position.y = 0.6;
 scene.add(wireMesh);
 
 
@@ -679,10 +850,10 @@ function setState(newState, data = {}) {
 
   switch (newState) {
     case STATES.IDLE:
-      stateLabel.textContent = 'IDLE';
+      stateLabel.textContent = '';
       mainText.innerHTML = 'REFLEX';
       mainText.className = 'main-text';
-      subText.textContent = 'Click START to begin';
+      subText.textContent = 'Click or press Space to begin';
       clickHint.style.opacity = '0';
       arenaGlow.style.background = '';
       arenaGlow.style.opacity = '0';
@@ -764,13 +935,11 @@ function setState(newState, data = {}) {
 }
 
 function getRating(ms) {
-  if (ms < 150) return '🏆 World Class!';
-  if (ms < 200) return '⚡ Elite reflexes';
-  if (ms < 250) return '🎯 Excellent!';
-  if (ms < 300) return '👍 Above average';
+  if (ms < 150) return '🏆 Amazing!';
+  if (ms < 200) return '⚡ Very Good!';
+  if (ms < 300) return '🎯 Good';
   if (ms < 400) return '✓ Average';
-  if (ms < 500) return 'Keep practicing';
-  return 'Slow and steady';
+  return '📉 Below Average';
 }
 
 // ==========================================
@@ -896,9 +1065,16 @@ function addHistory(ms, isFalse) {
 // EVENTS
 // ==========================================
 
-arena.addEventListener('click', handleReaction);
+arena.addEventListener('click', () => {
+  if (gameState === STATES.IDLE) { startGame(); return; }
+  handleReaction();
+});
 document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space') { e.preventDefault(); handleReaction(); }
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (gameState === STATES.IDLE) { startGame(); return; }
+    handleReaction();
+  }
 });
 btnStart.addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
 btnReset.addEventListener('click', (e) => { e.stopPropagation(); resetSession(); });
@@ -980,7 +1156,7 @@ function animate() {
   // Camera subtle float
   camera.position.x = Math.sin(time * 0.3) * 0.3;
   camera.position.y = Math.cos(time * 0.2) * 0.2;
-  camera.lookAt(0, 0, 0);
+  camera.lookAt(0, 0.6, 0);
 
   renderer.render(scene, camera);
 }
