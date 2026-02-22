@@ -950,6 +950,9 @@ function startGame() {
   if (!sessionActive) {
     sessionActive = true;
     btnStart.textContent = 'NEXT';
+    // Permanently hide instructions after first start
+    const idleInstructions = document.getElementById('idle-instructions');
+    idleInstructions.style.display = 'none';
   }
   clearTimeout(waitTimer);
   startRound();
